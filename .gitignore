@@ -21,3 +21,9 @@
 *.i*86
 *.x86_64
 *.hex
+
+# Ignore blitz tools
+blitz/
+
+# Ignore .DS_Store
+.DS_Store
