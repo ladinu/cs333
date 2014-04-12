@@ -4,7 +4,7 @@ code Hello
 
   function main ()
       print ("Hello, world...\n")
-      --foo (10)
+      foo (10)
     endFunction
 
   function foo (x: int)
