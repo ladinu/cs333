@@ -24,8 +24,8 @@ code Main
 
       -- SimpleThreadExample ()
       -- MoreThreadExamples ()
-      TestMutex ()
-      -- ProducerConsumer ()
+      -- TestMutex ()
+      ProducerConsumer ()
       -- DiningPhilosophers ()
 
       ThreadFinish ()
@@ -310,8 +310,14 @@ code Main
     bufferNextIn: int = 0
     bufferNextOut: int = 0
     thArray: array [8] of Thread = new array of Thread { 8 of new Thread }
+    fullCount: Semaphore = new Semaphore
+    emptyCount: Semaphore = new Semaphore
+    lock: Mutex = new Mutex
 
   function ProducerConsumer ()
+      fullCount.Init(0)
+      emptyCount.Init(BUFFER_SIZE)
+      lock.Init()
 
       print ("     ")
 
@@ -348,6 +354,8 @@ code Main
         c: char = intToChar ('A' + myId - 1)
       for i = 1 to 5
         -- Perform synchroniztion...
+        emptyCount.Down()
+        lock.Lock()
 
         -- Add c to the buffer
         buffer [bufferNextIn] = c
@@ -358,7 +366,8 @@ code Main
         PrintBuffer (c)
 
         -- Perform synchronization...
-
+        lock.Unlock()
+        fullCount.Up()
       endFor
     endFunction
 
@@ -367,7 +376,8 @@ code Main
         c: char
       while true
         -- Perform synchroniztion...
-
+        fullCount.Down()
+        lock.Lock()
         -- Remove next character from the buffer
         c = buffer [bufferNextOut]
         bufferNextOut = (bufferNextOut + 1) % BUFFER_SIZE
@@ -377,6 +387,8 @@ code Main
         PrintBuffer (c)
 
         -- Perform synchronization...
+        lock.Unlock()
+        emptyCount.Up()
 
       endWhile
     endFunction
