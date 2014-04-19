@@ -48,4 +48,4 @@ os: System.o List.o Thread.o Switch.o Synch.o Main.o Runtime.o
 	lddd System.o List.o Thread.o Switch.o Synch.o Main.o Runtime.o -o os
 
 clean:
-	rm -f *.o; rm -f os
+	rm -f *.o; rm -f os; find . -type f \( -iname "*.s" ! -iname "Runtime.s" ! -iname "Switch.s"  \)|xargs rm -f
