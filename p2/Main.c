@@ -22,9 +22,9 @@ code Main
 
       -----  Uncomment any one of the following to perform the desired test  -----
 
-      SimpleThreadExample ()
+      -- SimpleThreadExample ()
       -- MoreThreadExamples ()
-      -- TestMutex ()
+      TestMutex ()
       -- ProducerConsumer ()
       -- DiningPhilosophers ()
 
