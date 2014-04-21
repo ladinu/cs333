@@ -104,15 +104,15 @@ code Synch
       method Lock ()
           var oldIntStat: int
           oldIntStat = SetInterruptsTo (DISABLED)
-            if currentThread == heldBy
-               FatalError("Lock is already held")
-            endIf
-            if heldBy == null
-               heldBy = currentThread
-            else
-               waitingThreads.AddToEnd(currentThread)
-               currentThread.Sleep()
-            endIf
+          if currentThread == heldBy
+             FatalError("Lock is already held")
+          endIf
+          if heldBy == null
+             heldBy = currentThread
+          else
+             waitingThreads.AddToEnd(currentThread)
+             currentThread.Sleep()
+          endIf
           oldIntStat = SetInterruptsTo (oldIntStat)
         endMethod
 
@@ -123,15 +123,15 @@ code Synch
             oldIntStat: int
             t: ptr to Thread = null
           oldIntStat = SetInterruptsTo (DISABLED)
-            if currentThread != heldBy
-               FatalError("Thread does not hold a lock")
-            endIf
-            t = waitingThreads.Remove ()
-            heldBy = t
-            if t != null
-               t.status = READY
-               readyList.AddToEnd (t)
-            endIf
+          if currentThread != heldBy
+             FatalError("Thread does not hold a lock")
+          endIf
+          t = waitingThreads.Remove ()
+          heldBy = t
+          if t != null
+             t.status = READY
+             readyList.AddToEnd (t)
+          endIf
           oldIntStat = SetInterruptsTo (oldIntStat)
         endMethod
 
