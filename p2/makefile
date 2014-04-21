@@ -47,5 +47,7 @@ Main.o: Main.s
 os: System.o List.o Thread.o Switch.o Synch.o Main.o Runtime.o
 	lddd System.o List.o Thread.o Switch.o Synch.o Main.o Runtime.o -o os
 
+.SILENT: clean
+
 clean:
 	rm -f *.o; rm -f os; find . -type f \( -iname "*.s" ! -iname "Runtime.s" ! -iname "Switch.s"  \)|xargs rm -f
