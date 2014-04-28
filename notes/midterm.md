@@ -1,4 +1,4 @@
-# Overview of Operating Systems
+# Overview of Operating System
 
 ## What is an Operating System?
    * Just a program
@@ -182,33 +182,272 @@
    - Yes. The source code of the OS is a set of instructions describing
      how to do an activity
 * Is the Operating System a process? 
-   - Does it have a process control block? 
+   - Does it have a process control block?
+      - It does not because the OS is responsiblie for creating a PCB.
+        It doesnt make sense for it to have one.
    - How is its state managed when it is not running? 
+      - The state is managed by enabling the mode bit and ensuring that
+        no other program, other than the OS it self, can modify the
+        state when the OS is not running
 * What is the difference between processes and threads? 
    - Processes have seperate CPU and Memory context while threads
      share the address space of a process with diffrent CPU contexts.
 * What tasks are involved in switching the CPU from one
    process to another? 
-   - Why is it called a context switch? 
+   - Some sort of interrupt happens (i.e timer interupt, trap). The
+     hardware copies the state of the program into memeory and
+     simultaneously set the mode bit to privilaged. The address of part
+     of the OS is placed into the PC and OS start executing.
+   - Why is it called a context switch?
 * What tasks are involved in switching the CPU from one 
   thread to another? 
    - Why are threads “lightweight”?
    
 # Synchronization Primitives
 
+## Mutual Exclusion
+   1. No two processes simultaneously execute in critical section
+   2. No assumption about speed and number of CPUs
+   3. No process running outside its critical section may block another
+      process.
+   4. No process waits forever to enter its critical section
+
 ## Atomic Instructions
+   * Test and Set Lock (TSL)
+      1. Get the (old) value
+      2. Set the lock to **True**
+      3. Return the old value
+         ```
+         if returned value was FALSE
+            lock is aquired
+         if returned value was TRUE
+            someone else has the lock
+         ```
+   * Compare and Swap/Exchange
 
 ## Locks
+   * Ensure exclusive acess to shared data
+   * Expresses intention to enter critical section
+   * All threads must agree to aquire a lock before acessing the shared
+     data
 
 ## Spinlocks
+   * Also called polling, spinning or busy waiting. The thred consumes
+     CPU cycles to evaluate when the lock become free
+   ```c
+      repeat
+         while ( TSL(myLock) )
+            no-op;
+         ...
+         critical section
+         ...
+         myLock = FALSE;
+         ...
+         remainder section
+   ```
+   * Problem on a single CPU. The busy waiting can prevent the holder
+     of the lock from ever executing its critical section and releasing
+     the lock
 
-## Mutex Sempahores
+## Mutex
+   > Implementation
+   ```
+   Threds waitingThreads[];
+   Lock {
+    oldIntStat = SetInterruptsTo (DISABLED)
+       if (heldBy == Null) {
+         heldBy = currentThread;
+       } else {
+         waitingThreads.add(currentThread);
+         currentThread.Sleep();
+       }
+    oldIntStat = SetInterruptsTo(oldIntStat)
+   }
+   Unlock {
+    oldIntStat = SetInterruptsTo (DISABLED)
+       if (heldBy == currentThread) {
+         thread = waitingThreads.Remove();
+         if (thred != Null)
+            readyList.add(thread);
+       }
+    oldIntStat = SetInterruptsTo(oldIntStat)
+   }
+   ```
 
-## Counting Semaphores
+## Semaphores
+   > Implementation
+   ```
+   Up {
+    oldIntStat = SetInterruptsTo (DISABLED)
+       count = count + 1
+       if (count <= 0) {
+         t = waitingThreads.Remove ()
+         t.status = READY
+         readyList.AddToEnd (t)
+       }
+    oldIntStat = SetInterruptsTo(oldIntStat)
+   }
+   Down {
+    oldIntStat = SetInterruptsTo (DISABLED)
+       count = count - 1
+       if (count < 0) {
+         waitingThreads.AddToEnd (currentThread)
+         currentThread.Sleep ()
+       }
+    oldIntStat = SetInterruptsTo(oldIntStat)
+   }
+   ```
+
+   * `Wait(s) = Down(s) = P(s)`
+   * `Signal(s) = Up(s) = V(s)`
+
+## Monitors
+   * Is an *abstract data type* that presents a set of
+     programmer-defined operations that are provided mutual exclusion
+     within the monitor.
+
+## Condition Variables
+   * Tailor-made synchronization scheme made by programmer
+   * Only two methods `Down()` and `Up()` or `wait()` and `signal()`
+   * `cv.wait()` mean the process invoked the operation is suspended
+      until another process invoke `cv.signal()`
+   > Implementation in Blitz
+   ```c
+      Condition {
+         // Wait
+         method Wait(Mutex m) {
+          oldIntStat = SetInterruptsTo (DISABLED)
+            m.Unlock()
+             waitingThreads.AddToEnd (currentThread)
+             currentThread.Sleep ()
+            m.Lock()
+          oldIntStat = SetInterruptsTo(oldIntStat)
+         }
+         // Sleep
+         method Sleep() {
+          oldIntStat = SetInterruptsTo (DISABLED)
+          t = waitingThreads.Remove ()
+          if t
+            t.status = READY
+            readyList.AddToEnd (t)
+          endIf
+          oldIntStat = SetInterruptsTo (oldIntStat)
+         }
+      }
+   ```
+   
+# Recap
+1. What is a race condition? 
+   - When two or more threads manipulate shared data in such a way that
+     it cause unexpected results. This hapen when two or more threads
+     have inconsistent view of shared memory. i.e **whenever the result
+     depends on the precise execution order of the thrads**
+2. How can we protect against race conditions?
+   - Prevent context switches by preventing interrpts
+   - Make threds coordinate with each other to ensure **mutula
+     exclusion** in accessing **critical sections** of code
+3. Can locks be implemented simply by reading and 
+   writing to a binary variable in memory?
+   - No because simply reading and writing memory is not atomic. If the
+     memory is shared resources, threds could end up having an
+     inconsitent view.
+4. How can a kernel make synchronization-related 
+   system calls atomic on a uniprocessor? 
+      - The kernel disables interupts gaurnteeing no context switches
+        occur and after its critical section is done executing,
+        inttrupts are eneabled.
+      - Why wouldn’t this work on a multiprocessor?
+         - Disabling interupt on one CPU does not mean another CPU
+           disable interrupts. Another CPU can modify the memory. 
+5. Why is it better to block rather than spin on a 
+   uniprocessor?
+      - By spining, the thread might not allow another process to
+        execute its critical section and release the lock. By setting
+        status to blocked, it gives a chance for the process holding
+        the lock to run and release the lock.
+6. Why is it sometimes better to spin rather than 
+   block on a multiprocessor?
+      - Context switching and process re-scheduling can be expensive.
+        If threads are only likely to be blocked for short period,
+        spinlocks are acceptable solutions.
 
 # Concurrency Problems
 
 ## Produce Consumer (Bounded Buffer)
+   > **Incorrect solution **
+   ```c
+   int count = 0;
+   thread producer {
+      while(true) {
+         if (count == BUFFER_SIZE) {
+            sleep();
+         }
+         item = produceItem();
+         putItemInBuffer(item);
+         count = count + 1;
+         if (count == 1) {
+            wakeup(consumer);
+         }
+      }
+   }
+   thread consumer {
+      while(true) {
+         if (count == 0) {
+            sleep();
+         }
+         consumeItemFromBuffer();
+         count = count - 1
+         if (count == BUFFER_SIZE - 1) {
+            wakeup(producer);
+         }
+      }
+   }
+   ```
+   > **Only work for 1 producer and 1 consumer**
+   ```c
+   Semaphore fillCount = 0;
+   Semaphore emptyCount = BUFFER_SIZE;
+   thread producer() {
+      while (true) {
+         item = produceItem();
+         down(emptyCount);
+            putItemInBuffer(item);
+         up(fillCount);
+      }
+   }
+   thread consumer() {
+      while (true) {
+         down(fillCount);
+            consumeItemFromBuffer();
+         up(emptyCount);
+      }
+   }
+   ``` 
+   > **Correct Solution**
+   ```c
+   Mutex mutex;
+   Semaphore fillCount = 0;
+   Semaphore emptyCount = BUFFER_SIZE;
+   thread producer() {
+      while (true) {
+         item = produceItem();
+         down(emptyCount);
+            mutex.Lock();
+               putItemInBuffer(item);
+            mutex.Unlock();
+         up(fillCount);
+      }
+   }
+   thread consumer() {
+      while (true) {
+         down(fillCount);
+            mutex.Lock();
+               consumeItemFromBuffer();
+            mutex.Unlock();
+         up(emptyCount);
+      }
+   }
+   ``` 
 
 ## Dining Pnilosophers
 
@@ -236,10 +475,5 @@
       2. [**Progress**](#progress)
       3. [**Bounded waiting**](#bounded-waiting)
 
-## Mutual Exclusion 
-
-   * If process `P1` is executing in its critical section, then no other
-    process can be executing in their critical sections
-
-## Progress
-   * 
+# Deadlock Avoidance
+https://www.cs.princeton.edu/courses/archive/fall09/cos318/lectures/SemaphoresMonitors.pdf
