@@ -22,11 +22,11 @@ code Main
 
       -----  Uncomment any one of the following to perform the desired test  -----
 
-      -- SimpleThreadExample ()
-      -- MoreThreadExamples ()
-      -- TestMutex ()
-      ProducerConsumer ()
-      -- DiningPhilosophers ()
+      --SimpleThreadExample ()
+      --MoreThreadExamples ()
+      --TestMutex ()
+      --ProducerConsumer ()
+      DiningPhilosophers ()
 
       ThreadFinish ()
 
@@ -511,30 +511,90 @@ code Main
   class ForkMonitor
     superclass Object
     fields
-      status: array [5] of int             -- For each philosopher: HUNGRY, EATING, or THINKING
+      status: array [BUFFER_SIZE] of int      -- For each philosopher: HUNGRY, EATING, or THINKING
+      conditions: array [BUFFER_SIZE] of Condition
+      mutex: Mutex                         
     methods
       Init ()
       PickupForks (p: int)
       PutDownForks (p: int)
       PrintAllStatus ()
+      Test(p: int)
+      NeighborsNotEating(p: int) returns bool
+      rightNeighbor (p: int) returns int
+      leftNeighbor (p: int) returns int
   endClass
 
+  -- This solution implments the solution given in the book
   behavior ForkMonitor
 
     method Init ()
-      -- Initialize so that all philosophers are THINKING.
-      -- ...unimplemented...
+      var
+        i: int
+
+      status     = new array of int {5 of THINKING}
+      conditions = new array of Condition {BUFFER_SIZE of new Condition}
+      mutex      = new Mutex
+
+      mutex.Init()
+      for i = 0 to BUFFER_SIZE - 1
+        conditions[i].Init()
+      endFor
       endMethod
 
     method PickupForks (p: int)
       -- This method is called when philosopher 'p' is wants to eat.
-      -- ...unimplemented...
+        mutex.Lock()
+        status[p] = HUNGRY
+        self.PrintAllStatus()
+        self.Test(p)
+        if (status[p] != EATING)
+          conditions[p].Wait(&mutex)
+        endIf
+        mutex.Unlock()
       endMethod
 
     method PutDownForks (p: int)
       -- This method is called when the philosopher 'p' is done eating.
-      -- ...unimplemented...
+        mutex.Lock()
+        status[p] = THINKING
+        self.PrintAllStatus()
+        self.Test(self.leftNeighbor(p))
+        self.Test(self.rightNeighbor(p))
+        mutex.Unlock()
       endMethod
+
+    method Test (p: int)
+      -- This method assume it is called when the mutex is held
+      -- Method is responsible for changing status of philosopher to
+      -- eating
+        if (self.NeighborsNotEating(p) && 
+            (status[p] == HUNGRY)) 
+          status[p] = EATING
+          self.PrintAllStatus()
+          conditions[p].Signal(&mutex)
+        endIf
+      endMethod
+
+    method NeighborsNotEating (p: int) returns bool
+      -- This method check if status of right and left neighbor
+      -- is not equal to EATING. It is assumed that this method
+      -- is called from PutDownForks and PickupForks when lock
+      -- is aquired
+        return ((status[self.leftNeighbor(p)] != EATING) &&
+                (status[self.rightNeighbor(p)] != EATING))
+      endMethod
+
+    method leftNeighbor (p: int) returns int
+        -- Get the left neighbor of the given philosopher
+        return ((p + 1) % BUFFER_SIZE)
+      endMethod
+
+    method rightNeighbor (p: int) returns int
+        -- Get the right neighbor of the given philosopher
+        return ((p + 4) % BUFFER_SIZE)
+      endMethod
+
 
     method PrintAllStatus ()
       -- Print a single line showing the status of all philosophers.
