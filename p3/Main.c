@@ -9,7 +9,8 @@ code Main
 
   function main ()
       InitializeScheduler ()
-      SleepingBarber ()
+      --SleepingBarber ()
+      GamingParlor ()
       ThreadFinish ()
     endFunction
 
@@ -21,14 +22,14 @@ code Main
     barberThread    : Thread                   = new Thread
     customers       : Semaphore                = new Semaphore
     barbers         : Semaphore                = new Semaphore
-    mutex           : Semaphore                = new Semaphore
+    mutex           : Mutex                    = new Mutex
     waiting         : int                      = 0
 
   function SleepingBarber ()
 
       customers.Init(0)
       barbers.Init(0)
-      mutex.Init(1)
+      mutex.Init()
 
       print("         Barber  1   2   3   4   5   6   7   8   9   10  11  12  13  14  15  16  17  18  19  20\n")
 
@@ -106,21 +107,21 @@ code Main
   function BarberRoutine (barberId: int)
       while true
         customers.Down()
-        mutex.Down()
+        mutex.Lock()
         waiting = waiting - 1
         barbers.Up()
-        mutex.Up()
+        mutex.Unlock()
         CutHair()
       endWhile
     endFunction
 
   function CustomerRoutine (customerId: int)
-      mutex.Down()
+      mutex.Lock()
       E(customerId)
       if waiting < CHAIRS
         waiting = waiting + 1
         customers.Up()
-        mutex.Up()
+        mutex.Unlock()
         S(customerId)
         barbers.Down()
         B(customerId)
@@ -129,7 +130,7 @@ code Main
         L(customerId)
       else
         L(customerId)
-        mutex.Up()
+        mutex.Unlock()
       endIf
     endFunction
 
@@ -213,6 +214,128 @@ code Main
         print("-")
       endFor
     endFunction
+
+
+----------------------------------------------------------------------------------
+--------------------------------- Gaming Parlor ----------------------------------
+----------------------------------------------------------------------------------
+errors fatalError ()
+const DICE_COUNT = 8
+var
+   diceMonitor : DiceMonitor 
+   players     : array [8] of Thread 
+
+function GamingParlor()
+   players     = new array of Thread { 8 of new Thread }
+   diceMonitor = new DiceMonitor
+
+   -- Initialize the dice monitor
+   diceMonitor.Init()
+
+   --------- Backgamon Group ----------
+   players[0].Init("A-Backgammon")
+   players[0].Fork(PlayGame, 4)
+   players[1].Init("A-Backgammon")
+   players[1].Fork(PlayGame, 4)
+
+   --------- Risk Group ----------------
+   players[2].Init("A-Risk")
+   players[2].Fork(PlayGame, 5)
+   players[3].Init("A-Risk")
+   players[3].Fork(PlayGame, 5)
+
+   --------- Monopoly Group ------------
+   players[4].Init("A-Monopoly")
+   players[4].Fork(PlayGame, 2)
+   players[5].Init("A-Monopoly")
+   players[5].Fork(PlayGame, 2)
+
+   --------- Pictionary Group -----------
+   players[6].Init("A-Pictionary")
+   players[6].Fork(PlayGame, 1)
+   players[7].Init("A-Pictionary")
+   players[7].Fork(PlayGame, 1)
+
+endFunction
+
+function PlayGame(numberOfDice: int)
+   var i, j : int
+   for i = 1 to 5
+      diceMonitor.RequestDice(numberOfDice)
+      for j = 1 to 100
+         currentThread.Yield()
+      endFor
+      diceMonitor.ReturnDice(numberOfDice)
+   endFor
+endFunction
+
+class DiceMonitor
+ superclass Object
+ fields
+   monitorMutex   : Mutex
+   numberDiceAvail : int
+ methods
+   Init ()
+   RequestDice (numberOfDice: int)
+   ReturnDice  (numberOfDice: int)
+   Print       (str: String, count: int)
+endClass
+
+behavior DiceMonitor
+
+ method Init ()
+   monitorMutex = new Mutex
+   monitorMutex.Init()
+   numberDiceAvail = DICE_COUNT
+ endMethod
+
+ method RequestDice (numberOfDice: int)
+   var numNeeded: int = numberOfDice
+   monitorMutex.Lock()
+
+   -- Assert numberOfDice is between 1 and 5
+   assert(!(numberOfDice >= 1 && numberOfDice <= 5), "test")
+
+   self.Print("requests", numNeeded)
+
+   if numberDiceAvail >= numNeeded
+      numberDiceAvail = numberDiceAvail - numNeeded
+      self.Print("proceedes with", numberOfDice)
+   else
+      
+   endIf
+
+   monitorMutex.Unlock()
+ endMethod
+
+ method ReturnDice (numberOfDice: int)
+   monitorMutex.Lock()
+   self.Print("releases and adds back", numberOfDice)
+   monitorMutex.Unlock()
+ endMethod
+
+ method Print(str: String, count: int)
+   print (currentThread.name)
+   print (" ")
+   print (str)
+   print (" ")
+   printInt (count)
+   nl ()
+   print ("------------------------------Number of dice now avail = ")
+   printInt (numberDiceAvail)
+   nl ()
+ endMethod
+endBehavior
+
+function assert(condition: bool, err: String)
+   if condition
+      nl()
+      print ("Assertion Failure: ")
+      print(err)
+      nl()
+      throw fatalError()
+   endIf
+endFunction
 
 endCode
 
