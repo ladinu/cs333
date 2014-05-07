@@ -2,16 +2,16 @@ code Main
 
   -- OS Class: Project 3
   --
-  -- <PUT YOUR NAME HERE>
+  -- <Ladinu Chandrasinghe>
   --
 
 -----------------------------  Main  ---------------------------------
 
   function main ()
       InitializeScheduler ()
-      --SleepingBarber ()
-      GamingParlor ()
-      --ThreadFinish ()
+      SleepingBarber ()
+      --GamingParlor ()
+      ThreadFinish ()
     endFunction
 
   const
@@ -23,6 +23,7 @@ code Main
     customers       : Semaphore                = new Semaphore
     barbers         : Semaphore                = new Semaphore
     mutex           : Mutex                    = new Mutex
+    printLock       : Mutex                    = new Mutex
     waiting         : int                      = 0
 
   function SleepingBarber ()
@@ -30,6 +31,7 @@ code Main
       customers.Init(0)
       barbers.Init(0)
       mutex.Init()
+      printLock.Init()
 
       print("         Barber  1   2   3   4   5   6   7   8   9   10  11  12  13  14  15  16  17  18  19  20\n")
 
@@ -39,160 +41,172 @@ code Main
 
 
       customerThreads[0].Init ("1")
-      customerThreads[0].Fork (CustomerRoutine, 1)
+      customerThreads[0].Fork (HairCutLoop, 1)
 
       customerThreads[1].Init ("2")
-      customerThreads[1].Fork (CustomerRoutine, 2)
+      customerThreads[1].Fork (HairCutLoop, 2)
 
       customerThreads[2].Init ("3")
-      customerThreads[2].Fork (CustomerRoutine, 3)
+      customerThreads[2].Fork (HairCutLoop, 3)
 
       customerThreads[3].Init ("4")
-      customerThreads[3].Fork (CustomerRoutine, 4)
+      customerThreads[3].Fork (HairCutLoop, 4)
 
       customerThreads[4].Init ("5")
-      customerThreads[4].Fork (CustomerRoutine, 5)
+      customerThreads[4].Fork (HairCutLoop, 5)
 
       customerThreads[5].Init ("6")
-      customerThreads[5].Fork (CustomerRoutine, 6)
+      customerThreads[5].Fork (HairCutLoop, 6)
 
       customerThreads[6].Init ("7")
-      customerThreads[6].Fork (CustomerRoutine, 7)
+      customerThreads[6].Fork (HairCutLoop, 7)
 
       customerThreads[7].Init ("8")
-      customerThreads[7].Fork (CustomerRoutine, 8)
+      customerThreads[7].Fork (HairCutLoop, 8)
 
       customerThreads[8].Init ("9")
-      customerThreads[8].Fork (CustomerRoutine, 9)
+      customerThreads[8].Fork (HairCutLoop, 9)
 
       customerThreads[9].Init ("10")
-      customerThreads[9].Fork (CustomerRoutine, 10)
+      customerThreads[9].Fork (HairCutLoop, 10)
 
       customerThreads[10].Init ("11")
-      customerThreads[10].Fork (CustomerRoutine, 11)
+      customerThreads[10].Fork (HairCutLoop, 11)
 
       customerThreads[11].Init ("12")
-      customerThreads[11].Fork (CustomerRoutine, 12)
+      customerThreads[11].Fork (HairCutLoop, 12)
 
       customerThreads[12].Init ("13")
-      customerThreads[12].Fork (CustomerRoutine, 13)
+      customerThreads[12].Fork (HairCutLoop, 13)
 
       customerThreads[13].Init ("14")
-      customerThreads[13].Fork (CustomerRoutine, 14)
+      customerThreads[13].Fork (HairCutLoop, 14)
 
       customerThreads[14].Init ("15")
-      customerThreads[14].Fork (CustomerRoutine, 15)
+      customerThreads[14].Fork (HairCutLoop, 15)
 
       customerThreads[15].Init ("16")
-      customerThreads[15].Fork (CustomerRoutine, 16)
+      customerThreads[15].Fork (HairCutLoop, 16)
 
       customerThreads[16].Init ("17")
-      customerThreads[16].Fork (CustomerRoutine, 17)
+      customerThreads[16].Fork (HairCutLoop, 17)
 
       customerThreads[17].Init ("18")
-      customerThreads[17].Fork (CustomerRoutine, 18)
+      customerThreads[17].Fork (HairCutLoop, 18)
 
       customerThreads[18].Init ("19")
-      customerThreads[18].Fork (CustomerRoutine, 19)
+      customerThreads[18].Fork (HairCutLoop, 19)
 
       customerThreads[19].Init ("20")
-      customerThreads[19].Fork (CustomerRoutine, 20)
+      customerThreads[19].Fork (HairCutLoop, 20)
 
 
       ThreadFinish ()
     endFunction
 
-   
+   function HairCutLoop(customerId: int)
+      var i: int
+      for i = 0 to 10
+         CustomerRoutine(customerId)
+      endFor
+   endFunction
 
-  function BarberRoutine (barberId: int)
+   function BarberRoutine (barberId: int)
       while true
-        customers.Down()
-        mutex.Lock()
-        waiting = waiting - 1
-        barbers.Up()
-        mutex.Unlock()
-        CutHair()
+         customers.Down()
+         mutex.Lock()
+         waiting = waiting - 1
+         barbers.Up()
+         mutex.Unlock()
+         CutHair()
       endWhile
-    endFunction
+   endFunction
 
-  function CustomerRoutine (customerId: int)
+   function CustomerRoutine (customerId: int)
       mutex.Lock()
       E(customerId)
       if waiting < CHAIRS
         waiting = waiting + 1
+        S(customerId)
         customers.Up()
         mutex.Unlock()
-        S(customerId)
         barbers.Down()
-        B(customerId)
-        GetHairCut()
-        F(customerId)
+        GetHairCut(customerId)
         L(customerId)
       else
         L(customerId)
         mutex.Unlock()
       endIf
-    endFunction
+   endFunction
 
-  function CutHair ()
+   function CutHair ()
       var
         i: int
+      mutex.Lock()
       Start()
       for i = 1 to 100
          currentThread.Yield()
       endFor
       End()
-    endFunction
+      mutex.Unlock()
+   endFunction
 
-  function GetHairCut ()
+   function GetHairCut (customerId: int)
       var
         i: int
+      mutex.Lock()
+      B(customerId)
       for i = 1 to 100
          currentThread.Yield()
       endFor
-    endFunction
+      F(customerId)
+      mutex.Unlock()
+   endFunction
 
-  function Start ()
+-------------------------------------------------------------------
+-------------------- Helper Print function ------------------------
+-------------------------------------------------------------------
+   function Start ()
       PrintChairs()
       print("  start\n")
-    endFunction
+   endFunction
 
-  function End ()
+   function End ()
       PrintChairs()
       print("  end\n")
-    endFunction
+   endFunction
 
-  function E (cId: int)
+   function E (cId: int)
       PrintChairs()
       PrintSpaceForThread(cId)
       print("E\n")
-    endFunction
+   endFunction
 
-  function S (cId: int)
+   function S (cId: int)
       PrintChairs()
       PrintSpaceForThread(cId)
       print("S\n")
-    endFunction
+   endFunction
 
-  function L (cId: int)
+   function L (cId: int)
       PrintChairs()
       PrintSpaceForThread(cId)
       print("L\n")
-    endFunction
+   endFunction
 
-  function B (cId: int)
+   function B (cId: int)
       PrintChairs()
       PrintSpaceForThread(cId)
       print("B\n")
-    endFunction
+   endFunction
 
-  function F (cId: int)
+   function F (cId: int)
       PrintChairs()
       PrintSpaceForThread(cId)
       print("F\n")
-    endFunction
+   endFunction
   
-  function PrintChairs ()
+   function PrintChairs ()
       var
         i: int
       print("|")
@@ -204,16 +218,16 @@ code Main
         print ("_")
       endFor
       print("|")
-    endFunction
+   endFunction
 
-  function PrintSpaceForThread (spaces: int)
+   function PrintSpaceForThread (spaces: int)
       var
         i: int
       print("          ")
       for i = 1 to (spaces - 1) * 4
         print("-")
       endFor
-    endFunction
+   endFunction
 
 
 ----------------------------------------------------------------------------------
@@ -302,11 +316,26 @@ behavior DiceMonitor
    peopleInWaitingList = 0
  endMethod
 
+ -- This was a tricky method to implement. I was originally thinking
+ -- this monitor should at least have 5 dice before waking any customers
+ -- from the waiting list. This would avoid starvation but its not very
+ -- concurrent. I implemented the RequestDice method using 2
+ -- waitingLists. The second list named "diceList" at any given time
+ -- should only have 1 customer waiting. "peopleWaitingList" should have
+ -- all the other customers waiting.
+ --
+ -- Initially, the "waitingList" is empty. The first customer
+ -- increment "peopleInWaitingList" counter and tries to obtain some
+ -- dice. If there are not enough dice available, the customer put him/her
+ -- in the "diceList". The "ReturnDice" method wake up customers from the
+ -- "diceList". When a customer wake up from the "diceList", she/he wakes
+ -- up another customer from the "waitingList" before leaving the method.
+ -- This ensure that only 1 customer is in contention for dice at a given
+ -- time. This avoids starvation.
  method RequestDice (numberOfDice: int)
    var numNeeded: int = numberOfDice
    monitorMutex.Lock()
    self.Print("requests", numNeeded)
-   -- Assert numberOfDice is between 1 and 5
    assert(numNeeded >= MIN_DICE_PER_GAME && numNeeded <= MAX_DICE_PER_GAME)
 
 
