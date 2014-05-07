@@ -11,7 +11,7 @@ code Main
       InitializeScheduler ()
       --SleepingBarber ()
       GamingParlor ()
-      ThreadFinish ()
+      --ThreadFinish ()
     endFunction
 
   const
@@ -137,10 +137,11 @@ code Main
   function CutHair ()
       var
         i: int
+      Start()
       for i = 1 to 100
          currentThread.Yield()
       endFor
-      Start()
+      End()
     endFunction
 
   function GetHairCut ()
@@ -149,7 +150,6 @@ code Main
       for i = 1 to 100
          currentThread.Yield()
       endFor
-      End()
     endFunction
 
   function Start ()
@@ -220,7 +220,9 @@ code Main
 --------------------------------- Gaming Parlor ----------------------------------
 ----------------------------------------------------------------------------------
 errors fatalError ()
-const DICE_COUNT = 8
+const DICE_COUNT        = 8
+      MAX_DICE_PER_GAME = 5
+      MIN_DICE_PER_GAME = 1
 var
    diceMonitor : DiceMonitor 
    players     : array [8] of Thread 
@@ -235,27 +237,28 @@ function GamingParlor()
    --------- Backgamon Group ----------
    players[0].Init("A-Backgammon")
    players[0].Fork(PlayGame, 4)
-   players[1].Init("A-Backgammon")
+   players[1].Init("B-Backgammon")
    players[1].Fork(PlayGame, 4)
 
    --------- Risk Group ----------------
-   players[2].Init("A-Risk")
+   players[2].Init("C-Risk")
    players[2].Fork(PlayGame, 5)
-   players[3].Init("A-Risk")
+   players[3].Init("D-Risk")
    players[3].Fork(PlayGame, 5)
 
    --------- Monopoly Group ------------
-   players[4].Init("A-Monopoly")
+   players[4].Init("E-Monopoly")
    players[4].Fork(PlayGame, 2)
-   players[5].Init("A-Monopoly")
+   players[5].Init("F-Monopoly")
    players[5].Fork(PlayGame, 2)
 
    --------- Pictionary Group -----------
-   players[6].Init("A-Pictionary")
+   players[6].Init("G-Pictionary")
    players[6].Fork(PlayGame, 1)
-   players[7].Init("A-Pictionary")
+   players[7].Init("H-Pictionary")
    players[7].Fork(PlayGame, 1)
 
+   ThreadFinish ()
 endFunction
 
 function PlayGame(numberOfDice: int)
@@ -272,10 +275,13 @@ endFunction
 class DiceMonitor
  superclass Object
  fields
-   monitorMutex   : Mutex
-   numberDiceAvail : int
+   monitorMutex        : Mutex
+   numberDiceAvail     : int
+   waitingList         : Condition
+   diceList            : Condition
+   peopleInWaitingList : int
  methods
-   Init ()
+   Init        ( )
    RequestDice (numberOfDice: int)
    ReturnDice  (numberOfDice: int)
    Print       (str: String, count: int)
@@ -285,32 +291,61 @@ behavior DiceMonitor
 
  method Init ()
    monitorMutex = new Mutex
-   monitorMutex.Init()
-   numberDiceAvail = DICE_COUNT
+   waitingList  = new Condition
+   diceList     = new Condition
+
+   monitorMutex .Init ()
+   waitingList  .Init ()
+   diceList     .Init ()
+
+   numberDiceAvail     = DICE_COUNT
+   peopleInWaitingList = 0
  endMethod
 
  method RequestDice (numberOfDice: int)
    var numNeeded: int = numberOfDice
    monitorMutex.Lock()
-
-   -- Assert numberOfDice is between 1 and 5
-   assert(!(numberOfDice >= 1 && numberOfDice <= 5), "test")
-
    self.Print("requests", numNeeded)
+   -- Assert numberOfDice is between 1 and 5
+   assert(numNeeded >= MIN_DICE_PER_GAME && numNeeded <= MAX_DICE_PER_GAME)
 
-   if numberDiceAvail >= numNeeded
-      numberDiceAvail = numberDiceAvail - numNeeded
-      self.Print("proceedes with", numberOfDice)
-   else
-      
+
+   if peopleInWaitingList > 0
+      waitingList.Wait(&monitorMutex)
    endIf
 
+   peopleInWaitingList = peopleInWaitingList + 1
+   
+
+   while numNeeded > numberDiceAvail
+      diceList.Wait(&monitorMutex)
+   endWhile
+
+   peopleInWaitingList = peopleInWaitingList - 1
+
+   assert(numberDiceAvail >= 0 && numberDiceAvail <= DICE_COUNT)
+   numberDiceAvail = numberDiceAvail - numNeeded
+   assert(numberDiceAvail >= 0 && numberDiceAvail <= DICE_COUNT)
+
+   waitingList.Signal(&monitorMutex)
+
+   self.Print("proceds with", numNeeded)
    monitorMutex.Unlock()
  endMethod
 
  method ReturnDice (numberOfDice: int)
+   var numReturned: int = numberOfDice
    monitorMutex.Lock()
-   self.Print("releases and adds back", numberOfDice)
+
+   assert(numReturned >= MIN_DICE_PER_GAME && numReturned <= MAX_DICE_PER_GAME)
+
+   assert(numberDiceAvail >= 0 && numberDiceAvail <= DICE_COUNT)
+   numberDiceAvail = numberDiceAvail + numReturned
+   assert(numberDiceAvail >= 0 && numberDiceAvail <= DICE_COUNT)
+  
+   diceList.Signal(&monitorMutex)
+
+   self.Print("releases and adds back", numReturned)
    monitorMutex.Unlock()
  endMethod
 
@@ -327,11 +362,9 @@ behavior DiceMonitor
  endMethod
 endBehavior
 
-function assert(condition: bool, err: String)
-   if condition
-      nl()
-      print ("Assertion Failure: ")
-      print(err)
+function assert(condition: bool)
+   if !condition
+      print ("Assertion Failure")
       nl()
       throw fatalError()
    endIf
