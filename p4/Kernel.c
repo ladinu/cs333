@@ -690,9 +690,23 @@ code Kernel
         -- This method is called once at kernel startup time to initialize
         -- the one and only "ThreadManager" object.
         -- 
-          print ("Initializing Thread Manager...\n")
-          -- NOT IMPLEMENTED
-        endMethod
+        var i : int
+        print ("Initializing Thread Manager...\n")
+        
+        -- Init threads in threadTable and add thme to freeList
+        freeList = new List [Thread]
+        threadTable = new array of Thread {MAX_NUMBER_OF_PROCESSES of new Thread}
+        for i = 0 to MAX_NUMBER_OF_PROCESSES - 1
+          threadTable[i].Init("kernelThread")
+          threadTable[i].status = UNUSED
+          freeList.AddToEnd(&threadTable[i])
+        endFor
+        
+        threadManagerLock = new Mutex
+        threadManager.Init()
+        aThreadBecameFree = new Condition
+        aThreadBecameFree.Init()
+      endMethod
 
       ----------  ThreadManager . Print  ----------
 
@@ -725,7 +739,11 @@ code Kernel
         -- until one is available.
         -- 
           -- NOT IMPLEMENTED
-          return null
+        var returnThread : ptr to Thread = null
+        threadManagerLock.Lock()
+          
+        threadManagerLock.Unlock()
+        return returnThread
         endMethod
 
       ----------  ThreadManager . FreeThread  ----------
@@ -736,6 +754,9 @@ code Kernel
         -- to the FREE list.
         -- 
           -- NOT IMPLEMENTED
+        threadManagerLock.Lock()
+          
+        threadManagerLock.Unlock()
         endMethod
 
     endBehavior
