@@ -25,8 +25,8 @@ code Main
       --SimpleThreadExample ()
       --MoreThreadExamples ()
       --TestMutex ()
-      --ProducerConsumer ()
-      DiningPhilosophers ()
+      ProducerConsumer ()
+      --DiningPhilosophers ()
 
       ThreadFinish ()
 
