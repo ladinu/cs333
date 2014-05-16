@@ -358,7 +358,7 @@ behavior DiceMonitor
 
    waitingList.Signal(&monitorMutex)
 
-   self.Print("proceds with", numNeeded)
+   self.Print("proceeds with", numNeeded)
    monitorMutex.Unlock()
  endMethod
 
