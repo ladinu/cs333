@@ -703,7 +703,7 @@ code Kernel
         endFor
         
         threadManagerLock = new Mutex
-        threadManager.Init()
+        threadManagerLock.Init()
         aThreadBecameFree = new Condition
         aThreadBecameFree.Init()
       endMethod
@@ -739,11 +739,16 @@ code Kernel
         -- until one is available.
         -- 
           -- NOT IMPLEMENTED
-        var returnThread : ptr to Thread = null
+        var rth : ptr to Thread = null
         threadManagerLock.Lock()
-          
+          --  Wait untill a thread becomes free
+          while freeList.IsEmpty()
+            aThreadBecameFree.Wait(&threadManagerLock)
+          endWhile
+          rth = freeList.Remove()
+          rth.status = JUST_CREATED
         threadManagerLock.Unlock()
-        return returnThread
+        return rth
         endMethod
 
       ----------  ThreadManager . FreeThread  ----------
@@ -755,7 +760,9 @@ code Kernel
         -- 
           -- NOT IMPLEMENTED
         threadManagerLock.Lock()
-          
+          th.status = UNUSED
+          freeList.AddToEnd(th) 
+          aThreadBecameFree.Signal(&threadManagerLock)
         threadManagerLock.Unlock()
         endMethod
 
