@@ -852,6 +852,27 @@ code Kernel
         -- the one and only "processManager" object.  
         --
         -- NOT IMPLEMENTED
+          var i : int
+
+          nextPid = 0
+          -- Initialize the condition vars and mutexes
+          processManagerLock = new Mutex
+          processManagerLock.Init()
+          aProcessBecameFree = new Condition
+          aProcessBecameFree.Init()
+          aProcessDied = new Condition
+          aProcessDied.Init()
+
+          -- Init PCB and place in freeList
+          freeList = new List [ProcessControlBlock]
+          processTable = new array of ProcessControlBlock 
+                        {MAX_NUMBER_OF_PROCESSES of new ProcessControlBlock}
+
+          for i = 0 to MAX_NUMBER_OF_PROCESSES - 1
+            processTable[i].Init()
+            processTable[i].status = FREE
+            freeList.AddToEnd(&processTable[i])
+          endFor
         endMethod
 
       ----------  ProcessManager . Print  ----------
@@ -907,7 +928,20 @@ code Kernel
         -- until one is available.
         --
           -- NOT IMPLEMENTED
-          return null
+        var pcb : ptr to ProcessControlBlock
+        processManagerLock.Lock()
+          while freeList.IsEmpty()
+            aProcessBecameFree.Wait(&processManagerLock)
+          endWhile
+
+          nextPid = nextPid + 1 
+
+          pcb = freeList.Remove()
+          pcb.status = ACTIVE
+          pcb.pid = nextPid
+          
+        processManagerLock.Unlock()
+        return pcb
         endMethod
 
       ----------  ProcessManager . FreeProcess  ----------
@@ -918,6 +952,14 @@ code Kernel
         -- to the FREE list.
         --
           -- NOT IMPLEMENTED
+        processManagerLock.Lock()
+
+          p.pid = -1
+          p.status = FREE
+          freeList.AddToEnd(p)
+          aProcessBecameFree.Signal(&processManagerLock)
+
+        processManagerLock.Unlock()
         endMethod
 
 
