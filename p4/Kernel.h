@@ -159,6 +159,34 @@ header Kernel
       Broadcast (mutex: ptr to Mutex)
   endClass
 
+  ---------------  Monitor Mutex  ---------------
+
+  class MonitorMutex
+    superclass Object
+    fields
+      heldBy: ptr to Thread           -- Null means this mutex is unlocked.
+      waitingThreads: List [Thread]
+    methods
+      Init ()
+      Lock ()
+      Unlock ()
+      GiveLockTo (th: ptr to Thread)
+      IsHeldByCurrentThread () returns bool
+  endClass
+
+  ---------------  Hoare Condition  ----------
+
+  class HCondition
+    superclass Object
+    fields
+      waitingThreads: List [Thread]
+    methods
+      Init ()
+      Wait (mutex: ptr to MonitorMutex)
+      Signal (mutex: ptr to MonitorMutex)
+      -- Broadcast (mutex: ptr to Mutex) ?
+  endClass
+
   ---------------  Thread  ---------------
 
   class Thread

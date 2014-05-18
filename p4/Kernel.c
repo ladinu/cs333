@@ -342,6 +342,7 @@ code Kernel
 
   endBehavior
 
+
 -----------------------------  Condition  ---------------------------------
 
   behavior Condition
@@ -437,6 +438,227 @@ code Kernel
         endMethod
 
   endBehavior
+
+----------------------------- Monitor  Mutex  -----------------------------
+
+  behavior MonitorMutex
+    -- This class provides the following methods:
+    --    Lock()
+    --         Acquire the mutex if free, otherwise wait until the mutex is
+    --         free and then get it.
+    --    Unlock()
+    --         Release the mutex.  If other threads are waiting, then
+    --         wake up the oldest one and give it the lock.
+    --    Init()
+    --         Each mutex must be initialized.
+    --    IsHeldByCurrentThread()
+    --         Return TRUE iff the current (invoking) thread holds a lock
+    --         on the mutex.
+
+       -----------  Mutex . Init  -----------
+
+       method Init ()
+           waitingThreads = new List [Thread]
+         endMethod
+
+       -----------  MonitorMutex . Lock  -----------
+
+       method Lock ()
+           var
+             oldIntStat: int
+           oldIntStat = SetInterruptsTo (DISABLED)
+           if heldBy == currentThread
+             FatalError ("Attempt to lock a mutex by a thread already holding it")
+           endIf
+           if !heldBy
+             heldBy = currentThread
+           else
+             waitingThreads.AddToEnd (currentThread)
+             currentThread.Sleep ()
+           endIf
+           oldIntStat = SetInterruptsTo (oldIntStat)
+         endMethod
+
+       -----------  MonitorMutex . Unlock  -----------
+
+       method Unlock ()
+           var
+             oldIntStat: int
+             t: ptr to Thread
+           oldIntStat = SetInterruptsTo (DISABLED)
+           if heldBy != currentThread
+             FatalError ("Attempt to unlock a mutex by a thread not holding it")
+           endIf
+           
+           t = waitingThreads.Remove ()
+           if t
+             t.status = READY
+             readyList.AddToEnd (t)
+             heldBy = t
+           else
+             heldBy = null
+           endIf
+           oldIntStat = SetInterruptsTo (oldIntStat)
+         endMethod
+
+
+       -----------  MonitorMutex . GiveLockTo  -----------
+
+       method GiveLockTo (th: ptr to Thread)
+           var
+             oldIntStat: int
+           oldIntStat = SetInterruptsTo (DISABLED)
+           heldBy = th
+           oldIntStat = SetInterruptsTo (oldIntStat)
+         endMethod
+
+       -----------  Mutex . IsHeldByCurrentThread  -----------
+
+       method IsHeldByCurrentThread () returns bool
+           var oldIntStat: int
+               retVal : bool
+           oldIntStat = SetInterruptsTo (DISABLED)
+             retVal = (heldBy == currentThread)
+           oldIntStat = SetInterruptsTo (oldIntStat)
+           return retVal
+         endMethod
+
+  endBehavior
+
+-----------------------------  Hoare Condition  -------------------------------
+  behavior HCondition
+    -- This class is used to implement monitors.  Each monitor will have a
+    -- mutex lock and one or more condition variables.  The lock ensures that
+    -- only one process at a time may execute code in the monitor.  Within the
+    -- monitor code, a thread can execute Wait() and Signal() operations
+    -- on the condition variables to make sure certain condions are met.
+    --
+    -- The condition variables here implement "Mesa-style" semantics, which
+    -- means that in the time between a Signal() operation and the awakening
+    -- and execution of the corrsponding waiting thread, other threads may
+    -- have snuck in and run.  The waiting thread should always re-check the
+    -- data to ensure that the condition which was signalled is still true.
+    --
+    -- This class provides the following methods:
+    --    Wait(mutex)
+    --         This method assumes the mutex has alreasy been locked.
+    --         It unlocks it, and goes to sleep waiting for a signal on
+    --         this condition.  When the signal is received, this method
+    --         re-awakens, re-locks the mutex, and returns.
+    --    Signal(mutex)
+    --         If there are any threads waiting on this condition, this
+    --         method will wake up the oldest and schedule it to run.
+    --         However, since this thread holds the mutex and never unlocks
+    --         it, the newly awakened thread will be forced to wait before
+    --         it can re-acquire the mutex and resume execution.
+    --    Broadcast(mutex)
+    --         This method is like Signal() except that it wakes up all
+    --         threads waiting on this condition, not just the next one.
+    --    Init()
+    --         Each condition must be initialized.
+
+      ----------  Condition . Init  ----------
+
+      method Init ()
+          waitingThreads = new List [Thread]
+        endMethod
+
+      ----------  Condition . Wait  ----------
+
+      method Wait (mutex: ptr to MonitorMutex)
+          var
+            oldIntStat: int
+          oldIntStat = SetInterruptsTo (DISABLED)
+          if ! mutex.IsHeldByCurrentThread ()
+            FatalError ("Attempt to wait on condition when mutex is not held")
+          endIf
+          mutex.Unlock ()
+          waitingThreads.AddToEnd (currentThread)
+          currentThread.Sleep ()
+          mutex.Lock ()
+          oldIntStat = SetInterruptsTo (oldIntStat)
+        endMethod
+
+      ----------  Condition . Signal  ----------
+
+      method Signal (mutex: ptr to MonitorMutex)
+          var
+            oldIntStat: int
+            t: ptr to Thread
+          oldIntStat = SetInterruptsTo (DISABLED)
+          if ! mutex.IsHeldByCurrentThread ()
+            FatalError ("Attempt to signal a condition when mutex is not held")
+          endIf
+          t = waitingThreads.Remove ()
+          if t
+            t.status = READY
+            readyList.AddToFront (t)
+          endIf
+          mutex.GiveLockTo(t)
+          currentThread.Sleep()
+          mutex.GiveLockTo(currentThread)
+          oldIntStat = SetInterruptsTo (oldIntStat)
+        endMethod
+
+      ----------  Condition . Broadcast  ----------
+
+/*      ----------  Condition . Wait  ----------
+
+      method Wait (mutex: ptr to Mutex)
+          var
+            oldIntStat: int
+          if ! mutex.IsHeldByCurrentThread ()
+            FatalError ("Attempt to wait on condition when mutex is not held")
+          endIf
+          oldIntStat = SetInterruptsTo (DISABLED)
+          mutex.Unlock ()
+          waitingThreads.AddToEnd (currentThread)
+          currentThread.Sleep ()
+          mutex.Lock ()
+          oldIntStat = SetInterruptsTo (oldIntStat)
+        endMethod
+
+      ----------  Condition . Signal  ----------
+
+      method Signal (mutex: ptr to Mutex)
+          var
+            oldIntStat: int
+            t: ptr to Thread
+          if ! mutex.IsHeldByCurrentThread ()
+            FatalError ("Attempt to signal a condition when mutex is not held")
+          endIf
+          oldIntStat = SetInterruptsTo (DISABLED)
+          t = waitingThreads.Remove ()
+          if t
+            t.status = READY
+            readyList.AddToEnd (t)
+          endIf
+          oldIntStat = SetInterruptsTo (oldIntStat)
+        endMethod
+*/
+      ----------  Condition . Broadcast  ----------
+
+      /*method Broadcast (mutex: ptr to Mutex)*/
+      /*    var*/
+      /*      oldIntStat: int*/
+      /*      t: ptr to Thread*/
+      /*    if ! mutex.IsHeldByCurrentThread ()*/
+      /*      FatalError ("Attempt to broadcast a condition when lock is not held")*/
+      /*    endIf*/
+      /*    oldIntStat = SetInterruptsTo (DISABLED)*/
+      /*    while true*/
+      /*      t = waitingThreads.Remove ()*/
+      /*      if t == null*/
+      /*        break*/
+      /*      endIf*/
+      /*      t.status = READY*/
+      /*      readyList.AddToEnd (t)*/
+      /*    endWhile*/
+      /*    oldIntStat = SetInterruptsTo (oldIntStat)*/
+      /*  endMethod*/
+
+  endBehavior
+
 
 -----------------------------  Thread  ---------------------------------
 
