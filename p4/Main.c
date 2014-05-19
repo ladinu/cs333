@@ -499,6 +499,7 @@ code Main
       var
         threads : array [TCOUNT] of Thread = new array of Thread { TCOUNT of new Thread }
 
+      print("Thread     A     B     C     D     E     F     G     H     I     J     K\n")
       resourceMonitor.Init(MESA_SYMANTIC)
 
       threads[0].Init("A")
@@ -528,72 +529,17 @@ code Main
     endFunction
 
   function Contend (number: int)
-      var i, j : int
-      for i = 1 to 5
-         resourceMonitor.Request(number)
+      var i, j, thId : int
+      thId = (charToInt(currentThread.name[0]) - charToInt('A')) + 1
+      for i = 1 to 4
+         resourceMonitor.Request(number, thId)
          for j = 1 to 100
             currentThread.Yield()
          endFor
-         resourceMonitor.Release(number)
+         resourceMonitor.Release(number, thId)
       endFor
     endFunction
   
-  function PrintGoingToSleep ()
-      var
-        oldIntStat: int
-      oldIntStat = SetInterruptsTo (DISABLED)
-      print("Thread ")
-      print(currentThread.name)
-      print(":               Sleeping")
-      nl()
-      oldIntStat = SetInterruptsTo (oldIntStat)
-    endFunction
-
-  function PrintWakingUp ()
-      var
-        oldIntStat: int
-      oldIntStat = SetInterruptsTo (DISABLED)
-      print("Thread ")
-      print(currentThread.name)
-      print(":               Waking")
-      nl()
-      oldIntStat = SetInterruptsTo (oldIntStat)
-    endFunction
-
-  function PrintSignaling ()
-      var
-        oldIntStat: int
-      oldIntStat = SetInterruptsTo (DISABLED)
-      print("Thread ")
-      print(currentThread.name)
-      print(":               Signaling")
-      nl()
-      oldIntStat = SetInterruptsTo (oldIntStat)
-    endFunction
-
-  class ResourceMonitor
-   superclass Object
-   fields
-     monitorMutex : MonitorMutex
-     mutex        : Mutex
-     hCondition   : HCondition
-     mCondition   : Condition
-     cvType       : int
-     numResource  : int
-
-   methods
-     Init    (semantic: int)
-     Request (numRequested: int)
-     Release (numReleased: int)
-
-     Lock   ()
-     Unlock ()
-     Wait   ()
-     Signal ()
-
-     Error  ()
-  endClass
-
   behavior ResourceMonitor
 
    method Init (semantic: int)
@@ -616,22 +562,22 @@ code Main
      endMethod
 
 
-   method Request (numRequested: int)
+   method Request (numRequested, thId: int)
        self.Lock()
          while numResource < numRequested
-           PrintGoingToSleep()
+           PrintGoingToSleep(thId)
            self.Wait()
-           PrintWakingUp()
+           PrintWakingUp(thId)
          endWhile
          numResource = numResource - numRequested
        self.Unlock()
      endMethod
 
 
-   method Release (numReleased: int)
+   method Release (numReleased, thId: int)
        self.Lock()
        numResource = numResource + numReleased
-       PrintSignaling()
+       PrintSignaling(thId)
        self.Signal()
        self.Unlock()
      endMethod
@@ -682,6 +628,57 @@ code Main
      endMethod
 
   endBehavior
+
+  function PrintSpaceForThread (spaces: int)
+     var
+       i: int
+     print("           ")
+     assert(spaces != 0)
+     for i = 1 to (spaces - 1) * 6
+       print(".")
+     endFor
+   endFunction
+
+  function PrintRemainingSpaces (spaces: int)
+     var
+       i: int
+     for i = 0 to (59 - ((spaces - 1)*6))
+       print(".")
+     endFor
+   endFunction
+
+  function PrintGoingToSleep (thId: int)
+      var
+        oldIntStat: int
+      oldIntStat = SetInterruptsTo (DISABLED)
+      PrintSpaceForThread(thId)
+      print("S")
+      PrintRemainingSpaces(thId)
+      nl()
+      oldIntStat = SetInterruptsTo (oldIntStat)
+    endFunction
+
+  function PrintWakingUp (thId: int)
+      var
+        oldIntStat: int
+      oldIntStat = SetInterruptsTo (DISABLED)
+      PrintSpaceForThread(thId)
+      print("W")
+      PrintRemainingSpaces(thId)
+      nl()
+      oldIntStat = SetInterruptsTo (oldIntStat)
+    endFunction
+
+  function PrintSignaling (thId: int)
+      var
+        oldIntStat: int
+      oldIntStat = SetInterruptsTo (DISABLED)
+      PrintSpaceForThread(thId)
+      print("V")
+      PrintRemainingSpaces(thId)
+      nl()
+      oldIntStat = SetInterruptsTo (oldIntStat)
+    endFunction
 
   function assert(condition: bool)
       if !condition

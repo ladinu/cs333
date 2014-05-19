@@ -551,9 +551,6 @@ code Kernel
     --         However, since this thread holds the mutex and never unlocks
     --         it, the newly awakened thread will be forced to wait before
     --         it can re-acquire the mutex and resume execution.
-    --    Broadcast(mutex)
-    --         This method is like Signal() except that it wakes up all
-    --         threads waiting on this condition, not just the next one.
     --    Init()
     --         Each condition must be initialized.
 
@@ -599,63 +596,6 @@ code Kernel
           mutex.GiveLockTo(currentThread)
           oldIntStat = SetInterruptsTo (oldIntStat)
         endMethod
-
-      ----------  Condition . Broadcast  ----------
-
-/*      ----------  Condition . Wait  ----------
-
-      method Wait (mutex: ptr to Mutex)
-          var
-            oldIntStat: int
-          if ! mutex.IsHeldByCurrentThread ()
-            FatalError ("Attempt to wait on condition when mutex is not held")
-          endIf
-          oldIntStat = SetInterruptsTo (DISABLED)
-          mutex.Unlock ()
-          waitingThreads.AddToEnd (currentThread)
-          currentThread.Sleep ()
-          mutex.Lock ()
-          oldIntStat = SetInterruptsTo (oldIntStat)
-        endMethod
-
-      ----------  Condition . Signal  ----------
-
-      method Signal (mutex: ptr to Mutex)
-          var
-            oldIntStat: int
-            t: ptr to Thread
-          if ! mutex.IsHeldByCurrentThread ()
-            FatalError ("Attempt to signal a condition when mutex is not held")
-          endIf
-          oldIntStat = SetInterruptsTo (DISABLED)
-          t = waitingThreads.Remove ()
-          if t
-            t.status = READY
-            readyList.AddToEnd (t)
-          endIf
-          oldIntStat = SetInterruptsTo (oldIntStat)
-        endMethod
-*/
-      ----------  Condition . Broadcast  ----------
-
-      /*method Broadcast (mutex: ptr to Mutex)*/
-      /*    var*/
-      /*      oldIntStat: int*/
-      /*      t: ptr to Thread*/
-      /*    if ! mutex.IsHeldByCurrentThread ()*/
-      /*      FatalError ("Attempt to broadcast a condition when lock is not held")*/
-      /*    endIf*/
-      /*    oldIntStat = SetInterruptsTo (DISABLED)*/
-      /*    while true*/
-      /*      t = waitingThreads.Remove ()*/
-      /*      if t == null*/
-      /*        break*/
-      /*      endIf*/
-      /*      t.status = READY*/
-      /*      readyList.AddToEnd (t)*/
-      /*    endWhile*/
-      /*    oldIntStat = SetInterruptsTo (oldIntStat)*/
-      /*  endMethod*/
 
   endBehavior
 
