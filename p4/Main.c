@@ -111,7 +111,8 @@ code Main
       -- Run more thorough tests.
       --RunThreadManagerTests ()
       --RunProcessManagerTests ()
-      RunFrameManagerTests ()
+      --RunFrameManagerTests ()
+      RunHoareSymanticTests ()
 
       RuntimeExit ()
 
@@ -467,6 +468,227 @@ code Main
           FatalError ("Data corruption, indicating that frame was shared")
         endIf
       endFor
+    endFunction
+
+-----------------------------  RunHoareSymanticTest  ---------------------------------
+--
+-- This function tests the ThreadManager.  It creates a bunch of threads
+-- (NUM_THREADS) and starts each thread running.  Each thread will execute
+-- the "TestThreadManager" function.  The main thread will then wait until all
+-- the threads complete.  To control this, there is a single Semaphore "allDone".
+-- Each TestThreadManager thread signals it and the main thread will wait
+-- for NUM-THREAD times, i.e., until all threads have finished.
+--
+-- Each TestThreadManager does basically this:
+--        loop NUMBER_ITERATIONS times
+--           call GetANewThread
+--           wait
+--           call FreeThread
+--           wait
+--        endLoop
+--
+
+  errors fatalError ()
+  const RESOURCE_COUNT = 1
+        HOARE_SYMANTIC = 0
+        MESA_SYMANTIC  = 1
+        TCOUNT         = 11
+  var resourceMonitor : ResourceMonitor = new ResourceMonitor
+
+  function RunHoareSymanticTests ()
+      var
+        threads : array [TCOUNT] of Thread = new array of Thread { TCOUNT of new Thread }
+
+      resourceMonitor.Init(MESA_SYMANTIC)
+
+      threads[0].Init("A")
+      threads[0].Fork(Contend, 1)
+      threads[1].Init("B")
+      threads[1].Fork(Contend, 1)
+      threads[2].Init("C")
+      threads[2].Fork(Contend, 1)
+      threads[3].Init("D")
+      threads[3].Fork(Contend, 1)
+      threads[4].Init("E")
+      threads[4].Fork(Contend, 1)
+      threads[5].Init("F")
+      threads[5].Fork(Contend, 1)
+      threads[6].Init("G")
+      threads[6].Fork(Contend, 1)
+      threads[7].Init("H")
+      threads[7].Fork(Contend, 1)
+      threads[8].Init("I")
+      threads[8].Fork(Contend, 1)
+      threads[9].Init("J")
+      threads[9].Fork(Contend, 1)
+      threads[10].Init("K")
+      threads[10].Fork(Contend, 1)
+
+      ThreadFinish ()
+    endFunction
+
+  function Contend (number: int)
+      var i, j : int
+      for i = 1 to 5
+         resourceMonitor.Request(number)
+         for j = 1 to 100
+            currentThread.Yield()
+         endFor
+         resourceMonitor.Release(number)
+      endFor
+    endFunction
+  
+  function PrintGoingToSleep ()
+      var
+        oldIntStat: int
+      oldIntStat = SetInterruptsTo (DISABLED)
+      print("Thread ")
+      print(currentThread.name)
+      print(":               Sleeping")
+      nl()
+      oldIntStat = SetInterruptsTo (oldIntStat)
+    endFunction
+
+  function PrintWakingUp ()
+      var
+        oldIntStat: int
+      oldIntStat = SetInterruptsTo (DISABLED)
+      print("Thread ")
+      print(currentThread.name)
+      print(":               Waking")
+      nl()
+      oldIntStat = SetInterruptsTo (oldIntStat)
+    endFunction
+
+  function PrintSignaling ()
+      var
+        oldIntStat: int
+      oldIntStat = SetInterruptsTo (DISABLED)
+      print("Thread ")
+      print(currentThread.name)
+      print(":               Signaling")
+      nl()
+      oldIntStat = SetInterruptsTo (oldIntStat)
+    endFunction
+
+  class ResourceMonitor
+   superclass Object
+   fields
+     monitorMutex : MonitorMutex
+     mutex        : Mutex
+     hCondition   : HCondition
+     mCondition   : Condition
+     cvType       : int
+     numResource  : int
+
+   methods
+     Init    (semantic: int)
+     Request (numRequested: int)
+     Release (numReleased: int)
+
+     Lock   ()
+     Unlock ()
+     Wait   ()
+     Signal ()
+
+     Error  ()
+  endClass
+
+  behavior ResourceMonitor
+
+   method Init (semantic: int)
+       monitorMutex = new MonitorMutex
+       mutex        = new Mutex
+       hCondition   = new HCondition
+       mCondition   = new Condition
+
+       monitorMutex .Init()
+       mutex        .Init()
+       hCondition   .Init()
+       mCondition   .Init()
+       
+       cvType = semantic
+
+       monitorMutex .Init ()
+       hCondition   .Init ()
+
+       numResource = RESOURCE_COUNT
+     endMethod
+
+
+   method Request (numRequested: int)
+       self.Lock()
+         while numResource < numRequested
+           PrintGoingToSleep()
+           self.Wait()
+           PrintWakingUp()
+         endWhile
+         numResource = numResource - numRequested
+       self.Unlock()
+     endMethod
+
+
+   method Release (numReleased: int)
+       self.Lock()
+       numResource = numResource + numReleased
+       PrintSignaling()
+       self.Signal()
+       self.Unlock()
+     endMethod
+
+   method Wait ()
+       if cvType == HOARE_SYMANTIC
+         hCondition.Wait(&monitorMutex)
+       elseIf cvType == MESA_SYMANTIC
+         mCondition.Wait(&mutex)
+       else
+         self.Error()
+       endIf
+     endMethod
+
+   method Signal ()
+       if cvType == HOARE_SYMANTIC
+         hCondition.Signal(&monitorMutex)
+       elseIf cvType == MESA_SYMANTIC
+         mCondition.Signal(&mutex)
+       else
+         self.Error()
+       endIf
+     endMethod
+
+   method Lock ()
+       if cvType == HOARE_SYMANTIC
+         monitorMutex.Lock()
+       elseIf cvType == MESA_SYMANTIC
+         mutex.Lock()
+       else
+         self.Error()
+       endIf
+     endMethod
+
+   method Unlock ()
+       if cvType == HOARE_SYMANTIC
+         monitorMutex.Unlock()
+       elseIf cvType == MESA_SYMANTIC
+         mutex.Unlock()
+       else
+         self.Error()
+       endIf
+     endMethod
+
+   method Error ()
+       print("Invalid condition variable type")
+       throw fatalError()
+     endMethod
+
+  endBehavior
+
+  function assert(condition: bool)
+      if !condition
+         print ("Assertion Failure!!!")
+         nl()
+         throw fatalError()
+      endIf
     endFunction
 
 endCode
