@@ -500,7 +500,8 @@ code Main
         threads : array [TCOUNT] of Thread = new array of Thread { TCOUNT of new Thread }
 
       print("Thread     A     B     C     D     E     F     G     H     I     J     K\n")
-      resourceMonitor.Init(MESA_SYMANTIC)
+
+      resourceMonitor.Init(HOARE_SYMANTIC)
 
       threads[0].Init("A")
       threads[0].Fork(Contend, 1)
@@ -548,10 +549,10 @@ code Main
        hCondition   = new HCondition
        mCondition   = new Condition
 
-       monitorMutex .Init()
-       mutex        .Init()
-       hCondition   .Init()
-       mCondition   .Init()
+       monitorMutex .Init ()
+       mutex        .Init ()
+       hCondition   .Init ()
+       mCondition   .Init ()
        
        cvType = semantic
 
@@ -563,10 +564,14 @@ code Main
 
 
    method Request (numRequested, thId: int)
+       var i: int
        self.Lock()
          while numResource < numRequested
            PrintGoingToSleep(thId)
            self.Wait()
+           if monitorMutex.IsHeldByCurrentThread()
+            i = 1
+           endIf
            PrintWakingUp(thId)
          endWhile
          numResource = numResource - numRequested
@@ -579,7 +584,7 @@ code Main
        numResource = numResource + numReleased
        PrintSignaling(thId)
        self.Signal()
-       self.Unlock()
+       /*self.Unlock()*/
      endMethod
 
    method Wait ()
