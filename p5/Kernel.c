@@ -2780,23 +2780,34 @@ code Kernel
           pcb : ptr to ProcessControlBlock
           oldIntStat : int
 
-      oldIntStat = SetInterruptsTo (DISABLED)
 
       pcb = processManager.GetANewProcess()
       pcb.myThread = currentThread
       currentThread.myProcess = pcb
       addrSpace = &pcb.addrSpace
 
+      -- Read file from disk an load it into memory
       f = fileManager.Open("MyProgram")
       assert(f != null, "Could not open file")
       initPC = f.LoadExecutable(addrSpace)
       assert(initPC != -1, "Error loading program into memory")
       fileManager.Close(f)
 
-      initUserStackTop = addrSpace.numberOfPages * PAGE_SIZE + 1
-      initSystemStackTop = currentThread.systemStack[SYSTEM_STACK_SIZE-1]
+      initUserStackTop = addrSpace.numberOfPages * PAGE_SIZE
+      initSystemStackTop = (&currentThread.systemStack[SYSTEM_STACK_SIZE-1]) asInteger
+
+      oldIntStat = SetInterruptsTo (DISABLED)
+
+      addrSpace.SetToThisPageTable()
+      currentThread.isUserThread = true
+
+      print("Number of pages ")
+      printInt(addrSpace.numberOfPages)
+
+
+      BecomeUserThread(initUserStackTop, initPC, initSystemStackTop)
       
-      oldIntStat = SetInterruptsTo (oldIntStat)
+      /*oldIntStat = SetInterruptsTo (oldIntStat)*/
 
     endFunction
 
