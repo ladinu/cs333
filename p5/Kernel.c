@@ -1861,11 +1861,49 @@ code Kernel
 -----------------------------  Handle_Sys_Exec  ---------------------------------
 
   function Handle_Sys_Exec (filename: ptr to array of char) returns int
-      -- NOT IMPLEMENTED
-      PrintFuncNameOpenParan("Sys_Exec")
-      PrintStrArg("filename", GetStringFromVirtual(filename))
-      PrintCloseParan()
-      return 3000
+      var 
+         newAddrSpace       : AddrSpace = new AddrSpace
+         f                  : ptr to OpenFile
+         initPC             : int
+         fname              : array [MAX_STRING_SIZE] of char
+         err                : int
+         initUserStackTop   : int
+         initSystemStackTop : int
+         oldIntStat         : int
+
+      newAddrSpace.Init()
+
+      err = currentThread.myProcess.addrSpace.GetStringFromVirtual(
+         &fname, filename asInteger, MAX_STRING_SIZE)
+      if err < 0
+         return -1 -- Error when copying string from user space to kernel space
+      endIf
+
+      f = fileManager.Open(&fname)
+      if f == null 
+         return -1 -- Could not find file in disk
+      endIf
+      
+      initPC = f.LoadExecutable(&newAddrSpace)
+      fileManager.Close(f)
+      if initPC < 0
+         return -1 -- Error loading program into memeory
+      endIf
+
+      frameManager.ReturnAllFrames(&currentThread.myProcess.addrSpace)
+      currentThread.myProcess.addrSpace = newAddrSpace
+
+      initUserStackTop = newAddrSpace.numberOfPages * PAGE_SIZE
+      initSystemStackTop = (&currentThread.systemStack[SYSTEM_STACK_SIZE-1]) asInteger
+
+      oldIntStat = SetInterruptsTo (DISABLED)
+
+      newAddrSpace.SetToThisPageTable()
+      currentThread.isUserThread = true
+
+      BecomeUserThread(initUserStackTop, initPC, initSystemStackTop)
+      
+      return 3000 -- dead code
     endFunction
 
 -----------------------------  Handle_Sys_Create  ---------------------------------
@@ -1934,10 +1972,11 @@ code Kernel
 
 
 -----------------------------  Utility Functions  ---------------------------------
-var strBuffer : array [MAX_STRING_SIZE] of char
 
   function GetStringFromVirtual(virtString : String) returns ptr to array of char
-      var err : int
+      var 
+         strBuffer : array [MAX_STRING_SIZE] of char
+         err : int
       err = currentThread.myProcess.addrSpace.GetStringFromVirtual(
          &strBuffer, virtString asInteger, MAX_STRING_SIZE)
       assert(err >= 0, "Error when copying string from user space to kernel space")
