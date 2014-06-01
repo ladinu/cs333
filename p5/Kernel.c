@@ -2787,7 +2787,7 @@ code Kernel
       addrSpace = &pcb.addrSpace
 
       -- Read file from disk an load it into memory
-      f = fileManager.Open("MyProgram")
+      f = fileManager.Open("MyPrograms")
       assert(f != null, "Could not open file")
       initPC = f.LoadExecutable(addrSpace)
       assert(initPC != -1, "Error loading program into memory")
@@ -2801,10 +2801,6 @@ code Kernel
       addrSpace.SetToThisPageTable()
       currentThread.isUserThread = true
 
-      print("Number of pages ")
-      printInt(addrSpace.numberOfPages)
-
-
       BecomeUserThread(initUserStackTop, initPC, initSystemStackTop)
       
       /*oldIntStat = SetInterruptsTo (oldIntStat)*/
@@ -2815,7 +2811,14 @@ code Kernel
 -----------------------------  Utility Functions  ---------------------------------
   function assert (c : bool, msg : String)
       if !c
+        nl()
+        print("!!!!!!!!!!!!!!!! Assert Failed !!!!!!!!!!!!!!!!!!!!!!!!")
+        nl()
+        print("\t")
         print(msg)
+        nl()
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        nl()
         FatalError("Assertion failed!!")
       endIf
     endFunction
