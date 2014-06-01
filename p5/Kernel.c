@@ -1828,13 +1828,14 @@ code Kernel
       -- NOT IMPLEMENTED
       PrintFuncNameOpenParan("Sys_Shutdown")
       PrintCloseParan()
+      FatalError("Syscall 'Shutdown' was invoked by a user thread")
     endFunction
 
 -----------------------------  Handle_Sys_Yield  ---------------------------------
 
   function Handle_Sys_Yield ()
       -- NOT IMPLEMENTED
-      PrintFuncNameOpenParan("Sys_Shutdown")
+      PrintFuncNameOpenParan("Sys_Yield")
       PrintCloseParan()
     endFunction
 
@@ -1842,7 +1843,7 @@ code Kernel
 
   function Handle_Sys_Fork () returns int
       -- NOT IMPLEMENTED
-      PrintFuncNameOpenParan("Sys_Shutdown")
+      PrintFuncNameOpenParan("Sys_Fork")
       PrintCloseParan()
       return 1000
     endFunction
@@ -1851,7 +1852,7 @@ code Kernel
 
   function Handle_Sys_Join (processID: int) returns int
       -- NOT IMPLEMENTED
-      PrintFuncNameOpenParan("Sys_Shutdown")
+      PrintFuncNameOpenParan("Sys_Join")
       PrintIntArg("processID", processID)
       PrintCloseParan()
       return 2000
@@ -1944,9 +1945,8 @@ var strBuffer : array [MAX_STRING_SIZE] of char
     endFunction
 
   function PrintFuncNameOpenParan(fname : String)
-      nl()
       print(fname)
-      print("(")
+      print(" (")
     endFunction
   
   function PrintCloseParan()
@@ -1979,6 +1979,7 @@ var strBuffer : array [MAX_STRING_SIZE] of char
 
   function PrintBufArg(argName : String, arg : ptr to char)
       print(argName)
+      print(" = ")
       printHex(arg asInteger)
     endFunction
 
@@ -2880,7 +2881,7 @@ var strBuffer : array [MAX_STRING_SIZE] of char
       addrSpace = &pcb.addrSpace
 
       -- Read file from disk an load it into memory
-      f = fileManager.Open("MyProgram")
+      f = fileManager.Open("TestProgram1")
       assert(f != null, "Could not open file")
       initPC = f.LoadExecutable(addrSpace)
       assert(initPC != -1, "Error loading program into memory")
