@@ -2811,14 +2811,9 @@ code Kernel
 -----------------------------  Utility Functions  ---------------------------------
   function assert (c : bool, msg : String)
       if !c
-        nl()
-        print("!!!!!!!!!!!!!!!! Assert Failed !!!!!!!!!!!!!!!!!!!!!!!!")
-        nl()
-        print("\t")
+        print("\n!!!!!!!!!!!!!!!! Assert Failed !!!!!!!!!!!!!!!!!!!!!!!!\n\t")
         print(msg)
-        nl()
-        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-        nl()
+        print("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
         FatalError("Assertion failed!!")
       endIf
     endFunction
