@@ -1818,82 +1818,175 @@ code Kernel
 
   function Handle_Sys_Exit (returnStatus: int)
       -- NOT IMPLEMENTED
+      PrintFuncNameOpenParan("Sys_Exit")
+      PrintCloseParan()
     endFunction
 
 -----------------------------  Handle_Sys_Shutdown  ---------------------------------
 
   function Handle_Sys_Shutdown ()
       -- NOT IMPLEMENTED
+      PrintFuncNameOpenParan("Sys_Shutdown")
+      PrintCloseParan()
     endFunction
 
 -----------------------------  Handle_Sys_Yield  ---------------------------------
 
   function Handle_Sys_Yield ()
       -- NOT IMPLEMENTED
+      PrintFuncNameOpenParan("Sys_Shutdown")
+      PrintCloseParan()
     endFunction
 
 -----------------------------  Handle_Sys_Fork  ---------------------------------
 
   function Handle_Sys_Fork () returns int
       -- NOT IMPLEMENTED
-      return 0
+      PrintFuncNameOpenParan("Sys_Shutdown")
+      PrintCloseParan()
+      return 1000
     endFunction
 
 -----------------------------  Handle_Sys_Join  ---------------------------------
 
   function Handle_Sys_Join (processID: int) returns int
       -- NOT IMPLEMENTED
-      return 0
+      PrintFuncNameOpenParan("Sys_Shutdown")
+      PrintIntArg("processID", processID)
+      PrintCloseParan()
+      return 2000
     endFunction
 
 -----------------------------  Handle_Sys_Exec  ---------------------------------
 
   function Handle_Sys_Exec (filename: ptr to array of char) returns int
       -- NOT IMPLEMENTED
-      return 0
+      PrintFuncNameOpenParan("Sys_Exec")
+      PrintStrArg("filename", GetStringFromVirtual(filename))
+      PrintCloseParan()
+      return 3000
     endFunction
 
 -----------------------------  Handle_Sys_Create  ---------------------------------
 
   function Handle_Sys_Create (filename: ptr to array of char) returns int
       -- NOT IMPLEMENTED
-      return 0
+      PrintFuncNameOpenParan("Sys_Create")
+      PrintStrArg("filename", GetStringFromVirtual(filename))
+      PrintCloseParan()
+      return 4000
     endFunction
 
 -----------------------------  Handle_Sys_Open  ---------------------------------
 
   function Handle_Sys_Open (filename: ptr to array of char) returns int
       -- NOT IMPLEMENTED
-      return 0
+      PrintFuncNameOpenParan("Sys_Open")
+      PrintStrArg("filename", GetStringFromVirtual(filename))
+      PrintCloseParan()
+      return 5000
     endFunction
 
 -----------------------------  Handle_Sys_Read  ---------------------------------
 
   function Handle_Sys_Read (fileDesc: int, buffer: ptr to char, sizeInBytes: int) returns int
       -- NOT IMPLEMENTED
-      return 0
+      PrintFuncNameOpenParan("Sys_Read")
+      PrintIntArgs("fileDesc", fileDesc)
+      PrintBufArgs("buffer", buffer)
+      PrintIntArg("sizeInBytes", sizeInBytes)
+      PrintCloseParan()
+      return 6000
     endFunction
 
 -----------------------------  Handle_Sys_Write  ---------------------------------
 
   function Handle_Sys_Write (fileDesc: int, buffer: ptr to char, sizeInBytes: int) returns int
       -- NOT IMPLEMENTED
-      return 0
+      PrintFuncNameOpenParan("Sys_Write")
+      PrintIntArgs("fileDesc", fileDesc)
+      PrintBufArgs("buffer", buffer)
+      PrintIntArg("sizeInBytes", sizeInBytes)
+      PrintCloseParan()
+      return 7000
     endFunction
 
 -----------------------------  Handle_Sys_Seek  ---------------------------------
 
   function Handle_Sys_Seek (fileDesc: int, newCurrentPos: int) returns int
       -- NOT IMPLEMENTED
-      return 0
+      PrintFuncNameOpenParan("Sys_Seek")
+      PrintIntArgs("fileDesc", fileDesc)
+      PrintIntArg("newCurrentPos", newCurrentPos)
+      PrintCloseParan()
+      return 8000
     endFunction
 
 -----------------------------  Handle_Sys_Close  ---------------------------------
 
   function Handle_Sys_Close (fileDesc: int)
       -- NOT IMPLEMENTED
+      PrintFuncNameOpenParan("Sys_Close")
+      PrintIntArg("fileDesc", fileDesc)
+      PrintCloseParan()
     endFunction
 
+
+-----------------------------  Utility Functions  ---------------------------------
+var strBuffer : array [MAX_STRING_SIZE] of char
+
+  function GetStringFromVirtual(virtString : String) returns ptr to array of char
+      var err : int
+      err = currentThread.myProcess.addrSpace.GetStringFromVirtual(
+         &strBuffer, virtString asInteger, MAX_STRING_SIZE)
+      assert(err >= 0, "Error when copying string from user space to kernel space")
+      return &strBuffer
+    endFunction
+
+  function PrintFuncNameOpenParan(fname : String)
+      nl()
+      print(fname)
+      print("(")
+    endFunction
+  
+  function PrintCloseParan()
+      print(")")
+      nl()
+    endFunction
+  
+  function PrintIntArg(argName : String, argVal : int)
+      print(argName)
+      print(" = ")
+      printInt(argVal)
+    endFunction
+  
+  function PrintIntArgs(argName : String, argVal : int)
+      PrintIntArg(argName, argVal)
+      print(", ")
+    endFunction
+  
+  function PrintStrArg(argName : String, argVal : String)
+      print(argName)
+      print(" = '")
+      print(argVal)
+      print("'")
+    endFunction
+  
+  function PrintStrArgs(argName : String, argVal : String)
+      PrintStrArg(argName, argVal)
+      print(", ")
+    endFunction
+
+  function PrintBufArg(argName : String, arg : ptr to char)
+      print(argName)
+      printHex(arg asInteger)
+    endFunction
+
+  function PrintBufArgs(argName : String, arg : ptr to char)
+      PrintBufArg(argName, arg)
+      print(", ")
+    endFunction
+  
 -----------------------------  DiskDriver  ---------------------------------
 
   const
@@ -2787,7 +2880,7 @@ code Kernel
       addrSpace = &pcb.addrSpace
 
       -- Read file from disk an load it into memory
-      f = fileManager.Open("MyPrograms")
+      f = fileManager.Open("MyProgram")
       assert(f != null, "Could not open file")
       initPC = f.LoadExecutable(addrSpace)
       assert(initPC != -1, "Error loading program into memory")
@@ -2809,6 +2902,7 @@ code Kernel
 
 
 -----------------------------  Utility Functions  ---------------------------------
+
   function assert (c : bool, msg : String)
       if !c
         print("\n!!!!!!!!!!!!!!!! Assert Failed !!!!!!!!!!!!!!!!!!!!!!!!\n\t")
