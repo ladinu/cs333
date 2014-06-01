@@ -106,12 +106,13 @@ os: Runtime.o Switch.o System.o List.o BitMap.o Kernel.o Main.o
 #
 
 DISK: MyProgram TestProgram1 TestProgram2
-	diskUtil -i
-	diskUtil -a MyProgram MyProgram
-	diskUtil -a TestProgram1 TestProgram1
-	diskUtil -a TestProgram2 TestProgram2
+	/Users/ladinu/School/os/blitz/diskUtil -i
+	/Users/ladinu/School/os/blitz/diskUtil -a MyProgram MyProgram
+	/Users/ladinu/School/os/blitz/diskUtil -a TestProgram1 TestProgram1
+	/Users/ladinu/School/os/blitz/diskUtil -a TestProgram2 TestProgram2
 
 .SILENT: clean
 
 clean:
+	rm -f MyProgram TestProgram1 TestProgram2;
 	rm -f *.o; rm -f os; find . -type f \( -iname "*.s" ! -iname "Runtime.s" ! -iname "Switch.s"  ! -iname "UserRuntime.s" \)|xargs rm -f

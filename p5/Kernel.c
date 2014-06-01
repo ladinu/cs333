@@ -201,6 +201,12 @@ code Kernel
       return oldStat
     endFunction
 
+
+
+
+
+
+
 -----------------------------  Semaphore  ---------------------------------
 
   behavior Semaphore
@@ -1614,14 +1620,13 @@ code Kernel
     -- for the duration of its execution.
     --
 -- Uncomment this code later...
-      FatalError ("DISK INTERRUPTS NOT EXPECTED IN PROJECT 4")
-/*
+
       currentInterruptStatus = DISABLED
       -- print ("DiskInterruptHandler invoked!\n")
       if diskDriver.semToSignalOnCompletion
         diskDriver.semToSignalOnCompletion.Up()
       endIf
-*/
+
     endFunction
 
 -----------------------------  SerialInterruptHandler  --------------------------
@@ -2755,4 +2760,52 @@ code Kernel
         endMethod
 
   endBehavior
+-----------------------------  InitFirstProcess  ---------------------------------
+
+  function InitFirstProcess ()
+      var t : ptr to Thread
+      print("--------- InitFirstProcess ---------------")
+      t = threadManager.GetANewThread()
+      t.name = "UserProgram"     
+      t.Fork(StartUserProcess, 0)
+    endFunction
+
+
+  function StartUserProcess (arg : int)
+      var f : ptr to OpenFile
+          initPC : int
+          addrSpace : ptr to AddrSpace
+          initUserStackTop : int
+          initSystemStackTop : int
+          pcb : ptr to ProcessControlBlock
+          oldIntStat : int
+
+      oldIntStat = SetInterruptsTo (DISABLED)
+
+      pcb = processManager.GetANewProcess()
+      pcb.myThread = currentThread
+      currentThread.myProcess = pcb
+      addrSpace = &pcb.addrSpace
+
+      f = fileManager.Open("MyProgram")
+      assert(f != null, "Could not open file")
+      initPC = f.LoadExecutable(addrSpace)
+      assert(initPC != -1, "Error loading program into memory")
+      fileManager.Close(f)
+
+      initUserStackTop = addrSpace.numberOfPages * PAGE_SIZE + 1
+      initSystemStackTop = currentThread.systemStack[SYSTEM_STACK_SIZE-1]
+      
+      oldIntStat = SetInterruptsTo (oldIntStat)
+
+    endFunction
+
+
+-----------------------------  Utility Functions  ---------------------------------
+  function assert (c : bool, msg : String)
+      if !c
+        print(msg)
+        FatalError("Assertion failed!!")
+      endIf
+    endFunction
 endCode
