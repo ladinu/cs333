@@ -1819,14 +1819,13 @@ code Kernel
   function Handle_Sys_Exit (returnStatus: int)
       -- NOT IMPLEMENTED
       PrintFuncNameOpenParan("Sys_Exit")
+      PrintIntArg("returnStatus", returnStatus)
       PrintCloseParan()
     endFunction
 
 -----------------------------  Handle_Sys_Shutdown  ---------------------------------
 
   function Handle_Sys_Shutdown ()
-      /*PrintFuncNameOpenParan("Sys_Shutdown")*/
-      /*PrintCloseParan()*/
       FatalError("Syscall 'Shutdown' was invoked by a user thread")
     endFunction
 
@@ -2903,7 +2902,6 @@ code Kernel
 
   function InitFirstProcess ()
       var t : ptr to Thread
-      print("--------- InitFirstProcess ---------------")
       t = threadManager.GetANewThread()
       t.name = "UserProgram"     
       t.Fork(StartUserProcess, 0)
