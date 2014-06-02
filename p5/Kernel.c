@@ -1825,9 +1825,8 @@ code Kernel
 -----------------------------  Handle_Sys_Shutdown  ---------------------------------
 
   function Handle_Sys_Shutdown ()
-      -- NOT IMPLEMENTED
-      PrintFuncNameOpenParan("Sys_Shutdown")
-      PrintCloseParan()
+      /*PrintFuncNameOpenParan("Sys_Shutdown")*/
+      /*PrintCloseParan()*/
       FatalError("Syscall 'Shutdown' was invoked by a user thread")
     endFunction
 
@@ -1911,7 +1910,7 @@ code Kernel
   function Handle_Sys_Create (filename: ptr to array of char) returns int
       -- NOT IMPLEMENTED
       PrintFuncNameOpenParan("Sys_Create")
-      PrintStrArg("filename", GetStringFromVirtual(filename))
+      PrintStrArg("filename", GetStringFromVirtual(filename), filename)
       PrintCloseParan()
       return 4000
     endFunction
@@ -1921,7 +1920,7 @@ code Kernel
   function Handle_Sys_Open (filename: ptr to array of char) returns int
       -- NOT IMPLEMENTED
       PrintFuncNameOpenParan("Sys_Open")
-      PrintStrArg("filename", GetStringFromVirtual(filename))
+      PrintStrArg("filename", GetStringFromVirtual(filename), filename)
       PrintCloseParan()
       return 5000
     endFunction
@@ -2003,16 +2002,23 @@ code Kernel
       PrintIntArg(argName, argVal)
       print(", ")
     endFunction
+
+  function PrintStrArgPtr(originalArg : String)
+      print("(")
+      printHex(originalArg asInteger)
+      print(")")
+    endFunction
   
-  function PrintStrArg(argName : String, argVal : String)
+  function PrintStrArg(argName, argVal, originalArg : String)
       print(argName)
       print(" = '")
       print(argVal)
       print("'")
+      PrintStrArgPtr(originalArg)
     endFunction
   
-  function PrintStrArgs(argName : String, argVal : String)
-      PrintStrArg(argName, argVal)
+  function PrintStrArgs(argName, argVal, originalArg : String)
+      PrintStrArg(argName, argVal, originalArg)
       print(", ")
     endFunction
 
